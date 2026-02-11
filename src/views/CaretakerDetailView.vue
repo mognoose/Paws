@@ -69,7 +69,12 @@
         <!-- Calendar & Booking -->
         <div class="md:col-span-2">
           <div class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="font-semibold text-gray-900 mb-4">Available Dates</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-semibold text-gray-900">Book This Caretaker</h2>
+              <span class="text-sm text-indigo-600 font-medium">${{ caretaker.hourlyRate || '?' }}/hr</span>
+            </div>
+            
+            <p class="text-gray-600 text-sm mb-4">Select an available date (highlighted in green) to see available time slots.</p>
             
             <!-- Simple Calendar -->
             <div class="mb-6">
@@ -111,67 +116,92 @@
               </div>
             </div>
 
-            <!-- Available Slots for Selected Date -->
+            <!-- No Availability Message -->
+            <div v-if="!hasAnyAvailability" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p class="text-yellow-800 text-sm">
+                <strong>No availability set.</strong> This caretaker hasn't added their available times yet. 
+                Check back later or contact them directly.
+              </p>
+            </div>
+
+            <!-- Booking Form - appears when date is selected -->
             <div v-if="selectedDate" class="border-t pt-4">
               <h3 class="font-medium text-gray-900 mb-3">
-                Available times for {{ selectedDate }}
+                Book for {{ selectedDate }}
               </h3>
               
-              <div v-if="availableSlots.length === 0" class="text-gray-500 text-sm">
-                No available slots for this date
-              </div>
-              
-              <div v-else class="grid grid-cols-2 gap-2 mb-4">
-                <button
-                  v-for="slot in availableSlots"
-                  :key="slot.id"
-                  @click="selectSlot(slot)"
-                  :class="[
-                    'p-3 border rounded-lg text-sm transition',
-                    selectedSlot?.id === slot.id 
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  ]"
-                >
-                  {{ slot.startTime }} - {{ slot.endTime }}
-                </button>
-              </div>
-
-              <!-- Booking Form -->
-              <div v-if="selectedSlot" class="border-t pt-4">
-                <h3 class="font-medium text-gray-900 mb-3">Book this time</h3>
-                
-                <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Select your dog</label>
-                  <select
-                    v-model="selectedDogId"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              <!-- Time Slot Selection (if slots available) -->
+              <div v-if="availableSlots.length > 0" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select a time slot</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    v-for="slot in availableSlots"
+                    :key="slot.id"
+                    @click="selectSlot(slot)"
+                    :class="[
+                      'p-3 border rounded-lg text-sm transition',
+                      selectedSlot?.id === slot.id 
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    ]"
                   >
-                    <option value="">Choose a dog</option>
-                    <option v-for="dog in ownerDogs" :key="dog.id" :value="dog.id">
-                      {{ dog.name }} ({{ dog.breed }})
-                    </option>
-                  </select>
+                    {{ slot.startTime }} - {{ slot.endTime }}
+                  </button>
                 </div>
-
-                <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
-                  <textarea
-                    v-model="bookingNotes"
-                    rows="2"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Any special instructions..."
-                  ></textarea>
-                </div>
-
-                <button
-                  @click="handleBooking"
-                  :disabled="!selectedDogId || bookingStore.loading"
-                  class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
-                >
-                  {{ bookingStore.loading ? 'Booking...' : 'Request Booking' }}
-                </button>
               </div>
+
+              <!-- Default time inputs when no slots defined -->
+              <div v-else class="mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                    <input
+                      v-model="manualStartTime"
+                      type="time"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                    <input
+                      v-model="manualEndTime"
+                      type="time"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+                
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select your dog</label>
+                <select
+                  v-model="selectedDogId"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Choose a dog</option>
+                  <option v-for="dog in ownerDogs" :key="dog.id" :value="dog.id">
+                    {{ dog.name }} ({{ dog.breed }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
+                <textarea
+                  v-model="bookingNotes"
+                  rows="2"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Any special instructions..."
+                ></textarea>
+              </div>
+
+              <button
+                @click="handleBooking"
+                :disabled="!canBook || bookingStore.loading"
+                class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+              >
+                {{ bookingStore.loading ? 'Booking...' : 'Book Now' }}
+              </button>
             </div>
           </div>
         </div>
@@ -217,6 +247,8 @@ const selectedSlot = ref<AvailabilitySlot | null>(null)
 const selectedDogId = ref('')
 const bookingNotes = ref('')
 const showSuccessModal = ref(false)
+const manualStartTime = ref('09:00')
+const manualEndTime = ref('10:00')
 
 const caretaker = computed(() => caretakerStore.selectedCaretaker)
 
@@ -275,6 +307,18 @@ const availableSlots = computed(() => {
   )
 })
 
+const hasAnyAvailability = computed(() => {
+  return caretaker.value?.availability?.some((slot: AvailabilitySlot) => slot.isAvailable) || false
+})
+
+const canBook = computed(() => {
+  if (!selectedDogId.value) return false
+  if (availableSlots.value.length > 0) {
+    return !!selectedSlot.value
+  }
+  return manualStartTime.value && manualEndTime.value
+})
+
 onMounted(() => {
   const id = route.params.id as string
   caretakerStore.fetchCaretakerById(id)
@@ -303,10 +347,14 @@ const selectSlot = (slot: AvailabilitySlot) => {
 }
 
 const handleBooking = async () => {
-  if (!selectedSlot.value || !selectedDogId.value || !caretaker.value || !authStore.profile) return
+  if (!selectedDogId.value || !selectedDate.value || !caretaker.value || !authStore.profile) return
   
   const selectedDog = ownerDogs.value.find((d: Dog) => d.id === selectedDogId.value)
   if (!selectedDog) return
+
+  // Use slot times if available, otherwise use manual times
+  const startTime = selectedSlot.value?.startTime || manualStartTime.value
+  const endTime = selectedSlot.value?.endTime || manualEndTime.value
   
   const bookingId = await bookingStore.createBooking({
     ownerId: authStore.profile.uid,
@@ -315,9 +363,9 @@ const handleBooking = async () => {
     caretakerName: caretaker.value.displayName,
     dogId: selectedDog.id,
     dogName: selectedDog.name,
-    date: selectedSlot.value.date,
-    startTime: selectedSlot.value.startTime,
-    endTime: selectedSlot.value.endTime,
+    date: selectedDate.value,
+    startTime,
+    endTime,
     status: 'pending',
     notes: bookingNotes.value
   })
@@ -328,6 +376,8 @@ const handleBooking = async () => {
     selectedSlot.value = null
     selectedDogId.value = ''
     bookingNotes.value = ''
+    manualStartTime.value = '09:00'
+    manualEndTime.value = '10:00'
   }
 }
 </script>
